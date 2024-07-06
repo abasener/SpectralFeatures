@@ -8,9 +8,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.text as mtext
 import matplotlib.transforms as mtransforms
+import pickle
 
 class aplot:
-    def __init__ (self, wl,spec, name, type = "veg", h= 8, w = 20, LineColor=[],LineName=[],LineNM=[],LineAll=[],LineFound=[],ShadeName=[],ShadeColor=[],ShadeStart=[],ShadeStop=[]):
+    def __init__ (self, wl,spec, name, type = "veg", h= 8, w = 20, 
+                  plot_gas_trans = False, plot_red_edge = False,
+                  gas_names = [], gas_scale = 1, gas_density_factor = 1,
+                  feat_params = 'default'):
     # Parameters:
     # - wl: Array of wavelengths corresponding to the spectral data.
     # - spec: Array of reflectance values corresponding to the spectral data.
@@ -18,6 +22,9 @@ class aplot:
     # - type: Type of data (default is "veg" for vegetation).
     # - h: Height of the plot figure in inches (default is 8).
     # - w: Width of the plot figure in inches (default is 20).
+    # - gas_names: a list of names from 'H2O', 'CO2', 'O3', 'CH4', 'O2'
+    # - gas_scale: single number, scaling factor for the plot of the gas transmission
+    # - gas_density_factor: single number, scaling on the density of the gas for the plot of the gas transmission
     # - LineColor: List of colors for vertical lines to be added to the plot.
     # - LineName: List indicating whether to include chemical names in annotations for each line (1 for include, 0 for exclude).
     # - LineNM: List indicating whether to include wavelength (WL) in annotations for each line (1 for include, 0 for exclude).
@@ -27,12 +34,33 @@ class aplot:
     # - ShadeColor: List of colors for shaded regions.
     # - ShadeStart: List of starting wavelengths for each shaded region.
     # - ShadeStop: List of stopping wavelengths for each shaded region.
+        if plot_gas_trans:
+            gas_names = ['H2O', 'CO2', 'O3', 'CH4', 'O2']
+            gas_scale = 1
+            gas_density_factor = 1
+        if plot_red_edge:
+            ShadeName=["Red Edge"]
+            ShadeColor=["red"]
+            ShadeStart=[650]
+            ShadeStop=[750]
+        if feat_params == 'default':
+            feat_params = {'present': {'show_line':True, 'color':'red', 'show_label':True, 'show_wl':True},
+                           'not_present': {'show_line':True, 'color':'green', 'show_label':False, 'show_wl':False}}
+        # firest index is for not-found\matched features, second is for found\matched features
+        LineFound = [0,1] 
+        LineColor = [feat_params['not_present']["color"], feat_params['present']["color"]]
+        LineNM = [feat_params['not_present']["show_wl"], feat_params['present']["show_wl"]] 
+        LineName = [feat_params['not_present']["show_label"], feat_params['present']["show_label"]]
+        LineAll = [feat_params['not_present']["show_line"], feat_params['present']["show_line"]]
         self.spec = spec
         self.wl = wl
         self.type = type
         self.h = h
         self.w = w
         self.name = name
+        self.gas_names = gas_names
+        self.gas_scale = [gas_scale]*len(gas_names)
+        self.gas_density_factor = [gas_density_factor]*len(gas_names)
         # Read data lines
         self.read_lines()
         # Make plot
@@ -40,21 +68,22 @@ class aplot:
 
         # Add shade
         # Determine the minimum length of ShadeStart and ShadeStop lists
-        min_length = min(len(ShadeStart), len(ShadeStop))
-        for n in range(min_length):
-            args = {}
-            if n < len(ShadeName) and ShadeName:  # Check if ShadeName has an element at index n and is not empty
-                args['name'] = ShadeName[n]
-            if n < len(ShadeColor) and ShadeColor:  # Check if ShadeColor has an element at index n and is not empty
-                args['color'] = ShadeColor[n]
-            if n < len(ShadeStart) and ShadeStart:  # Check if ShadeStart has an element at index n and is not empty
-                args['start'] = ShadeStart[n]
-            if n < len(ShadeStop) and ShadeStop:  # Check if ShadeStop has an element at index n and is not empty
-                args['stop'] = ShadeStop[n]
-            # Call self.add_shade with the arguments that are not empty
-            if args:
-                self.add_shade(**args)
-            #Example call: ShadeName=["Red Edge"],ShadeColor=["red"],ShadeStart=[650,1375,1880],ShadeStop=[750,1500]
+        if plot_red_edge:
+            min_length = min(len(ShadeStart), len(ShadeStop))
+            for n in range(min_length):
+                args = {}
+                if n < len(ShadeName) and ShadeName:  # Check if ShadeName has an element at index n and is not empty
+                    args['name'] = ShadeName[n]
+                if n < len(ShadeColor) and ShadeColor:  # Check if ShadeColor has an element at index n and is not empty
+                    args['color'] = ShadeColor[n]
+                if n < len(ShadeStart) and ShadeStart:  # Check if ShadeStart has an element at index n and is not empty
+                    args['start'] = ShadeStart[n]
+                if n < len(ShadeStop) and ShadeStop:  # Check if ShadeStop has an element at index n and is not empty
+                    args['stop'] = ShadeStop[n]
+                # Call self.add_shade with the arguments that are not empty
+                if args:
+                    self.add_shade(**args)
+                #Example call: ShadeName=["Red Edge"],ShadeColor=["red"],ShadeStart=[650,1375,1880],ShadeStop=[750,1500]
 
         # Add lines
         # Determine the maximum length of LineName, LineNM, LineAll, LineFound, and LineColor lists
@@ -81,14 +110,15 @@ class aplot:
         
     def read_lines(self):
         if self.type == "veg":
-            file_path = 'Veg1.xlsx'
-        self.dfL = pd.read_excel(file_path)
+            file_path = 'Veg1.csv'
+        self.dfL = pd.read_csv(file_path)
 
     def make_plot(self):
         plt.figure(figsize=(self.w, self.h))
         plt.plot(self.wl, self.spec, label=self.name, linewidth=0.75)
         plt.xlabel('Wavelength (nm)', fontsize=12)
-        plt.ylabel('Reflectance', fontsize=12)
+        plt.ylabel('Reflectance', fontsize=12)        
+        self.plt_gas_transmission(gas_names = self.gas_names, gas_scale = self.gas_scale, gas_density_factor = self.gas_density_factor)
 
         # Calculate the range of wavelengths
         min_wavelength = np.min(self.wl)
@@ -106,7 +136,9 @@ class aplot:
         plt.grid(True, which='minor', axis='x', linestyle='--', linewidth=0.25, color='grey')  # Lighter grid every 100 nm
 
         plt.title('Reflectance Spectra for Vegetation', fontsize=20)
-        plt.legend(bbox_to_anchor=(0, -0.1), loc='upper left', ncol=4)
+        leg = plt.legend(bbox_to_anchor=(0, -0.1), loc='upper left', ncol=4)
+        for legobj in leg.legendHandles:
+            legobj.set_linewidth(5)
         plt.xlim(min_wavelength, max_wavelength)
 
     def add_lines(self,color="green",nameBool=1,nmBool=0,allBool=1,foundBool=1,LineSize=0.05,fontSize=10):
@@ -179,3 +211,72 @@ class aplot:
         plt.text(midpoint, ymax - 0.2 * (ymax - ymin), name, ha='center', va='center', rotation=90, fontsize=12)
         # Restore original y-axis limits
         plt.ylim(ymin, ymax)
+
+    def resample_atm_dict(self):        
+        # read the atmospheric gases library
+        fname = 'atm_gas_dict_full_wl.pkl'
+        pkl_file = open(fname, 'rb')
+        atm_dict = pickle.load(pkl_file)
+        pkl_file.close()
+        atm_dict_resampled = {}
+        gas_names = atm_dict.keys()
+        scale = 1
+        if (np.mean(self.wl) > 100):
+            scale = 1000
+        for name in gas_names:
+            atm_dict[name]['wl'] = atm_dict[name]['wl']*scale
+            resample = spectral.BandResampler(atm_dict[name]['wl'],self.wl)
+            atm_dict_resampled[name] = resample(atm_dict[name]['transmission'])
+            # replace any NaNs (from non-overlapping wavelengths, where gas spectra not availalbe) to 1
+            atm_dict_resampled[name][np.isnan(atm_dict_resampled[name])] = 1
+        fname = 'atm_gas_dict_asd.pkl'
+        pkl_file = open(fname, 'ab')
+        pickle.dump(atm_dict_resampled, pkl_file)
+        pkl_file.close()
+
+    def plt_gas_transmission(self, gas_names = [], gas_scale = [], gas_density_factor = []):
+        # read the atmospheric gases library
+        fname = 'atm_gas_dict_asd.pkl'
+        pkl_file = open(fname, 'rb')
+        self.atm_dict_resampled = pickle.load(pkl_file)
+        pkl_file.close()
+        fname = 'atm_gas_dict_full_wl.pkl'
+        pkl_file = open(fname, 'rb')
+        self.atm_dict = pickle.load(pkl_file)
+        pkl_file.close()
+        # set the scale and density_factor if needed
+        if len(gas_scale) < len(gas_names):
+            gas_scale = [1]*len(gas_names)
+        if len(gas_density_factor) < len(gas_names):
+            gas_density_factor = [1]*len(gas_names)
+
+        # get the current plot range
+        yrange = plt.ylim()
+        xrange = plt.xlim()
+        # plot selected atmospheric gases
+        for name,gas_scale,gas_density in zip(gas_names,gas_scale,gas_density_factor):
+            if name=='CH4':
+                gas_density = gas_density*0.5
+            if name=='O2':
+                gas_density = gas_density*20
+            if name=='CO2':
+                gas_density = gas_density*4
+            # scale and plot
+            atm_s = self.atm_dict_resampled[name]
+            atm_s = 1 - (1-atm_s)*gas_scale
+            atm_s = yrange[0] + (yrange[1]-yrange[0])*(atm_s**gas_scale)**(80*gas_density)
+            atm_s_min = np.zeros(len(atm_s))
+            # apply minimum-smoothing to gas spectrum
+            width = 2
+            for i in range(len(atm_s)):
+                left = np.max([i-width,0])
+                right = np.min([i+width,len(atm_s)-1])
+                atm_s_min[i] = np.mean(atm_s[left:right])
+
+            # plot using the color and scale factor from the atm gas parameters dict if available
+            atm_color = self.atm_dict[name]['color']
+            plt.plot(self.wl, atm_s_min, color=atm_color, label = name, alpha=0.2)
+            plt.fill_between(self.wl, atm_s_min, yrange[1] * np.ones(len(atm_s_min)), color=atm_color, alpha=0.05)
+
+        plt.ylim(yrange)
+        plt.xlim(xrange)
