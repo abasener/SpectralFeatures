@@ -10,6 +10,35 @@ import matplotlib.text as mtext
 import matplotlib.transforms as mtransforms
 import pickle
 
+
+    
+def plot(wl,s,n):
+    fig = plt.figure(figsize=(20, 8))
+    plt.plot(wl, s, label=n, linewidth=0.75)
+    plt.xlabel('Wavelength (nm)', fontsize=12)
+    plt.ylabel('Reflectance', fontsize=12)        
+
+    # Calculate the range of wavelengths
+    min_wavelength = np.min(wl)
+    max_wavelength = np.max(wl)
+
+    # Set major and minor ticks for the x-axis
+    major_ticks = np.arange(np.ceil(min_wavelength / 500) * 500, max_wavelength + 500, 500)
+    minor_ticks = np.arange(np.ceil(min_wavelength / 100) * 100, max_wavelength + 100, 100)
+
+    plt.xticks(major_ticks)
+    plt.gca().set_xticks(minor_ticks, minor=True)
+
+    # Set grid lines
+    plt.grid(True, which='major', axis='both', linestyle='-', linewidth=0.5, color='gray')  # Darker grid every 500 nm
+    plt.grid(True, which='minor', axis='x', linestyle='--', linewidth=0.25, color='grey')  # Lighter grid every 100 nm
+
+    plt.title('Reflectance Spectra for '+n, fontsize=20)
+    leg = plt.legend(bbox_to_anchor=(0, -0.1), loc='upper left', ncol=4)
+    for legobj in leg.legend_handles :
+        legobj.set_linewidth(5)
+    plt.xlim(min_wavelength, max_wavelength)
+
 class aplot:
     def __init__ (self, wl,spec, name, type = "veg", h= 8, w = 20, 
                   plot_gas_trans = False, plot_red_edge = False,
@@ -135,7 +164,7 @@ class aplot:
         plt.grid(True, which='major', axis='both', linestyle='-', linewidth=0.5, color='gray')  # Darker grid every 500 nm
         plt.grid(True, which='minor', axis='x', linestyle='--', linewidth=0.25, color='grey')  # Lighter grid every 100 nm
 
-        plt.title('Reflectance Spectra for Vegetation', fontsize=20)
+        plt.title('Reflectance Spectra for '+self.name, fontsize=20)
         leg = plt.legend(bbox_to_anchor=(0, -0.1), loc='upper left', ncol=4)
         for legobj in leg.legendHandles:
             legobj.set_linewidth(5)
