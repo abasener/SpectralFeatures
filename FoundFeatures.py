@@ -35,7 +35,7 @@ class fFeat:
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
         self.folder_name = folder_name
-       
+
         for index, row in self.dfL.iterrows():
             # Find the index of closest wavelength in centers_np to row['WL']
             idx = np.abs(np.array(self.wl) - row['WL']).argmin()
@@ -54,10 +54,10 @@ class fFeat:
         if FetSave == 1 or FetSave == 3:
             for item in output_list:
                 print(item)
-        
+
         if FetSave == 2 or FetSave == 3:
             self.write_output_list_to_file(output_list)
-        
+
     def read_lines(self):
         if self.type == "veg":
             file_path = 'Veg1.xlsx'
@@ -71,10 +71,10 @@ class fFeat:
         sanitized_name = re.sub(r'[<>:"/\\|?*]', '_', self.name)
         filename = f"{sanitized_name}_{current_time}.txt"
         filepath = os.path.join(self.folder_name, filename)
-        
+
         # Write output_list to text file
         with open(filepath, 'w') as file:
             for item in output_list:
                 file.write(f"{item}\n")
-        
+
         print(f"Output list saved as {filename} in folder {self.folder_name}")
